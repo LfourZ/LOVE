@@ -1,0 +1,1 @@
+copy /b love.exe+%1 "exe\%~n1.exe"
