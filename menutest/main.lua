@@ -1,8 +1,19 @@
 function love.load()
 
-	love.window.setMode(800, 800, {resizable = true, minwidth = 300, minheight = 300, borderless = false, vsync = true, msaa = 0})
+	love.window.setMode(800, 800, {resizable = true, minwidth = 300, minheight = 300, borderless = false, vsync = true, msaa = 16})
 
-	love.graphics.setBlendMode("alpha", "premultiplied")
+	-----
+	fireparticle = love.graphics.newImage("fireparticle.png")
+	particle = love.graphics.newParticleSystem(fireparticle, 1000)
+	particle:setParticleLifetime(1)
+	particle:setSizes(0.1, 0)
+	particle:setSpeed(100)
+	particle:setSpread(6.28319)
+	particle:setEmissionRate(100)
+	particle:stop()
+	-----
+	canvasfsaa = 16
+	--love.graphics.setBlendMode("alpha", "premultiplied")
 	wx, wy = love.window.getMode()
 	love.graphics.setBackgroundColor(0, 0, 0)
 	size = 7
@@ -20,6 +31,7 @@ function love.load()
 	wrong = 0
 	shades = 7
 	spn = 255 / shades
+	score = 0
 	cornerround = 10
 	location = "game"
 	menulocation = "main"
@@ -44,6 +56,7 @@ function love.load()
 				restart = {
 					action = function ()
 						createtiles()
+						renderGameCanvas()
 					end,
 					mode = "fill",
 					color = { r = 255, g = 0, b = 0, a = 255 },
@@ -60,17 +73,28 @@ function love.load()
 	-----
 	function renderMenus()
 		for k, v in pairs(menus) do
-			menus[k].rendered = love.graphics.newCanvas()
+			menus[k].rendered = love.graphics.newCanvas(nil, nil, nil, canvasfsaa)
 			love.graphics.setCanvas(menus[k].rendered)
 			for k2, v2 in pairs(v.objects) do
 				love.graphics.setColor(v2.color.r, v2.color.g, v2.color.b, v2.color.a)
-				love.graphics.rectangle(v2.mode, v2.pos.x1 * wx, v2.pos.y1 * wy, v2.pos.x2 * wx - v2.pos.x1 * wx, v2.pos.y2 * wx - v2.pos.y1 * wy, v2.corner.radx, v2.corner.rady, v2.corner.segments)
+				love.graphics.rectangle(v2.mode, v2.pos.x1 * wx, v2.pos.y1 * wy, v2.pos.x2 * wx - v2.pos.x1 * wx, v2.pos.y2 * wy - v2.pos.y1 * wy, v2.corner.radx, v2.corner.rady, v2.corner.segments)
 				if v2.text.content ~= nil then
 					love.graphics.setColor(v2.text.color.r, v2.text.color.g, v2.text.color.b, v2.text.color.a)
 					love.graphics.print(v2.text.content, v2.pos.x1 * wx, v2.pos.y1 * wy)
 				end
 			end
 		end
+		love.graphics.setCanvas()
+	end
+	-----
+	function renderGameCanvas()
+		gamecanvas = love.graphics.newCanvas(nil, nil, nil, canvasfsaa)
+		love.graphics.setCanvas(gamecanvas)
+		drawtiles()
+		markSelected()
+		love.graphics.setColor(255, 0, 0)
+		love.graphics.print(score, 0, 0, 0, 2)
+		love.graphics.draw(particle)
 		love.graphics.setCanvas()
 	end
 	-----
@@ -88,6 +112,8 @@ function love.load()
 	end
 	-----
 	function createtiles()
+		score = 0
+		math.randomseed(os.clock())
 		for i = 1, size do
 			tiles[i] = {}
 			for n = 1, size do
@@ -99,7 +125,9 @@ function love.load()
 	function markSelected()
 		if not selected then return end
 		love.graphics.setColor(150, 150, 255)
-		love.graphics.rectangle("line", (selectedx - 1) * xp, (selectedy - 1) * yp, xp, yp)
+		love.graphics.rectangle("line", (selectedx - 1) * xp, (selectedy - 1) * yp, xp, yp, cornerround, cornerround, cornerquality)
+		particle:setPosition(selectedx * xp - xp / 2, selectedy * yp - yp / 2)
+		particle:start()
 	end
 	-----
 	function isNextTo()
@@ -141,23 +169,37 @@ function love.load()
 	createtiles()
 end
 
-function love.update()
+function love.update(Dt)
+	if location == "game" then
+		gamecanvas = nil
+		particle:update(Dt)
+	end
 	if wrong ~= 0 then
 		love.graphics.setBackgroundColor(wrongp * wrong, 0, 0)
 		wrong =  wrong - 1
 	elseif right ~= 0 then
 		love.graphics.setBackgroundColor(0, rightp * right, 0)
 		right =  right - 1
+		if right == 0 then
+			particle:stop()
+		end
 	end
 end
 
 function love.draw()
 	if location == "menu" then
-		
+		if gamecanvas == nil then
+			renderGameCanvas()
+		end
+		love.graphics.setColor(255, 255, 255, 255)
+		love.graphics.draw(gamecanvas)
 		love.graphics.draw(menus[menulocation].rendered)
 	elseif location == "game" then
 		drawtiles()
 		markSelected()
+		love.graphics.setColor(255, 0, 0)
+		love.graphics.print(score, 0, 0, 0, 2)
+		love.graphics.draw(particle)
 	end
 end
 
@@ -165,6 +207,7 @@ function love.resize(X, Y)
 	wx, wy = X, Y
 	xp, yp = wx/size, wy/size
 	margin = math.floor(((wx + wy) / 2) / 300)
+	renderGameCanvas()
 	renderMenus()
 end
 
@@ -175,12 +218,14 @@ function love.mousepressed(X, Y)
 		if not selected then
 			selected = true
 		else
+			particle:stop()
 			if isNextTo() and isRightColor() then
 				if selecteds == shades then
 					tiles[selectedx][selectedy] = 0
 				else
 					tiles[selectedx][selectedy] = selecteds + 1
 				end
+				score = score + 1
 				right = righttime
 			else
 				wrong = wrongtime
