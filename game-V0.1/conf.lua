@@ -6,7 +6,7 @@ function love.conf(t)
     t.externalstorage = false           -- True to save files (and read from the save directory) in external storage on Android (boolean)
     t.gammacorrect = true               -- Enable gamma-correct rendering, when supported by the system (boolean)
 
-    t.window.title = "Menutest"         -- The window title (string)
+    t.window.title = "The Game V 0.8"   -- The window title (string)
     t.window.icon = nil                 -- Filepath to an image to use as the window's icon (string)
     t.window.width = 800                -- The window width (number)
     t.window.height = 600               -- The window height (number)
