@@ -9,6 +9,7 @@ function love.load()
 	-Can now load maps better
 	-A lote more that I didn't write down
 	]]--
+	FRICTION, STOPVEL = 0.8, 20
 	_G.world = love.physics.newWorld(0, 0, true)
 	curmap = "map2"
 	MAPDATA = require(curmap..".mapdata")
@@ -80,6 +81,17 @@ function love.load()
 		map[i] = {}
 		for  n = 0, 9 do
 			map[i][n] = love.graphics.newImage("map2/map2-0"..tostring(n).."-0"..tostring(i)..".png")
+		end
+	end
+
+	function applyFriction(Body)
+		local xlvel, ylvel = Body:getLinearVelocity()
+		xlvel, ylvel = xlvel * FRICTION, ylvel * FRICTION
+		if math.abs(xlvel) < STOPVEL and math.abs(ylvel) < STOPVEL then
+			Body:setLinearVelocity(0, 0)
+			Body:setAwake(false)
+		else
+			Body:setLinearVelocity(xlvel, ylvel)
 		end
 	end
 
@@ -160,7 +172,7 @@ function love.draw()
 		end
 	end
 	love.graphics.setColor(0, 255, 0)
-	love.graphics.print(love.timer.getFPS(), -wXh, -wYh, 0, 0.25)
+	love.graphics.print(player.body:getLinearVelocity(), -wXh, -wYh, 0, 0.25)
 	love.graphics.setColor(193, 47, 14)
 	love.graphics.circle("fill", player.body:getX() - posx, player.body:getY() - posy, player.shape:getRadius())
 	for name, object in pairs(objects) do
@@ -193,6 +205,9 @@ function love.update(Dt)
 	if Dtt > physicsRate then
 		_G.world:update(Dt)
 		Dtt = Dtt - physicsRate
+		for k, object in pairs(objects) do
+			applyFriction(object.body)
+		end
 
 		if love.keyboard.isDown("w") then
 			player.body:applyForce(0, -player.character.movespeed)

@@ -1,12 +1,15 @@
+local shine = require 'shine'
 function love.load()
 
-	love.window.setMode(1000, 1000, {resizable = false, borderless = true, vsync = true, msaa = 8})
+	love.window.setMode(1000, 1000, {resizable = false, borderless = true, vsync = false, msaa = 8})
 
 	--[[
 	CHANGES:
 	-Can now rerender a single menu at a time
 	]]--
 	-----
+	shader = shine.gaussianBlur()
+	shader.parameters = { sigma = 10 }
 	fireparticle = love.graphics.newImage("fireparticle.png")
 	particle = love.graphics.newParticleSystem(fireparticle, 1000)
 	particle:setParticleLifetime(1)
@@ -149,7 +152,7 @@ function love.load()
 		renderMenus()
 	end
 	-----
-	isWithinCircle(X, Y, X2, Y2)
+	function isWithinCircle(X, Y, X2, Y2)
 		local dx = X - X2
 		local dy = Y - Y2
 		return math.sqrt((dx ^ 2) + (dy ^ 2))
@@ -188,7 +191,7 @@ function love.load()
 					local segmentlen = sliderlen / (v2.special.segments - 1)
 					local radius = (((v2.pos.y2 - v2.pos.y1) * wy) / 2) * 0.25 - 2
 					for i = 0, v2.special.segments - 1 do
-						love.graphics.circle(v2.special.mode, firstsegment + i * segmentlen - 10,  ((v2.pos.y2 + v2.pos.y1) / 2) * wy, radius)
+						love.graphics.circle(v2.special.mode, firstsegment + i * segmentlen - 10, ((v2.pos.y2 + v2.pos.y1) / 2) * wy, radius)
 					end
 					love.graphics.setColor(v2.special.colorselected)
 					local radius = (((v2.pos.y2 - v2.pos.y1) * wy) / 2) * 0.20 - 2
@@ -219,7 +222,7 @@ function love.load()
 	-----
 	function getMenuAction(X, Y)
 		if not location == "menu" then return end
-		local found =  false
+		local found = false
 		for k, v in pairs(menus[menulocation].objects) do
 			if X > v.pos.x1 * wx and Y > v.pos.y1 * wy and X < v.pos.x2 * wx and Y < v.pos.y2 * wy then
 				if v.special ~= nil and v.special.class == "slider" then
@@ -257,7 +260,7 @@ function love.load()
 	end
 	-----
 	function isNextTo()
-		if selectedx <= lastx + 1 and selectedx >= lastx - 1 and selectedy <= lasty + 1 and selectedy >= lasty - 1 and not (selectedx == lastx and selectedy ==  lasty) then
+		if selectedx <= lastx + 1 and selectedx >= lastx - 1 and selectedy <= lasty + 1 and selectedy >= lasty - 1 and not (selectedx == lastx and selectedy == lasty) then
 			return true
 		else
 			return false
@@ -302,10 +305,10 @@ function love.update(Dt)
 	end
 	if wrong ~= 0 then
 		love.graphics.setBackgroundColor(wrongp * wrong, 0, 0)
-		wrong =  wrong - 1
+		wrong = wrong - 1
 	elseif right ~= 0 then
 		love.graphics.setBackgroundColor(0, rightp * right, 0)
-		right =  right - 1
+		right = right - 1
 		if right == 0 then
 			particle:stop()
 		end
@@ -325,7 +328,10 @@ function love.draw()
 		markSelected()
 		love.graphics.setColor(255, 0, 0)
 		love.graphics.print(score, wx / 2)
-		love.graphics.draw(particle)
+		shader:draw(function()
+			love.graphics.draw(particle)
+		end)
+		love.graphics.setShader()
 	end
 	love.graphics.setColor(0, 255, 0)
 	love.graphics.print(love.timer.getFPS(), 0, 0, 0, 0.3)
@@ -363,7 +369,7 @@ end
 
 function love.keypressed(Key, Scancode, Repeat)
 	if Key == "escape" then
-		if location ==  "game" then
+		if location == "game" then
 			menulocation = "main"
 			location = "menu"
 		elseif location == "menu" then
