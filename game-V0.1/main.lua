@@ -6,7 +6,8 @@ function love.load()
 	-Added characters, weapons and mods folders. Hype?
 	-At the time of releasing this, I was expecting the above update note to be several versions old
 	So I can confirm it: "hype". You can now load custom stats to your player, although only 'player.movespeed' does anything
-	-
+	-Can now load maps better
+	-A lote more that I didn't write down
 	]]--
 	_G.world = love.physics.newWorld(0, 0, true)
 	curmap = "map2"

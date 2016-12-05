@@ -68,12 +68,12 @@ M.data = {--This stuff is still in development
 
 M.tiles = {
 	{
-		"tilename",
-		"name of tile"
+		"1st row, 1st item",
+		"1st row, 2nd item"
 	},
 	{
-		"another tilename",
-		"Nom de la tuile"
+		"2nd row, 1st item",
+		"2nd row, 2nd item"
 	}
 }
 
