@@ -1,7 +1,7 @@
 local M = {
 	testman = {
 		health = 100,
-		movespeed = 15000
+		movespeed = 500
 	}
 }
 

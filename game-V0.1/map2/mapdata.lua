@@ -16,7 +16,9 @@ M.objects = {--Here I created a table within the root table called 'objects' thi
 		drawmode = "fill",--Another comma
 		renderdist = 100,--Another comma
 		render = true,--Another comma
-		mass = 0.0001--No comma! This is of course because it is the last item in the table 'wall'
+		angularDamping = 1,
+		linearDamping = 1,
+		mass = 0.01--No comma! This is of course because it is the last item in the table 'wall'
 	},--And again another comma - thiis is because the table is also considered an item, and isn't the last thing
 	--in the table 'objects'
 
@@ -43,6 +45,8 @@ M.objects = {--Here I created a table within the root table called 'objects' thi
 		--This should generally be set to half the highest width or height, whatever is higher
 		render = false,--This should be set to false if the alpha channel is equal to zero. Stops object from being rendered
 		--whatsoever
+		angularDamping = 2,
+		linearDamping = 2,
 		mass = 10--This doesn't do anything since this is a static body, but I have been setting static objects' mass to 10
 	},
 	topwall = {
@@ -54,6 +58,8 @@ M.objects = {--Here I created a table within the root table called 'objects' thi
 		color = { 0, 0, 255 },--Note how I didn't include the apha channel
 		renderdist = 0,
 		render = false,--This is a map border, I don't want to render that
+		angularDamping = 2,
+		linearDamping = 2,
 		mass = 10
 	}
 }

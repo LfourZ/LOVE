@@ -1,15 +1,14 @@
 function love.load()
+	love.window.setMode(1000, 1000, { resizable = true, msaa = 4, vsync = false })
 	--[[
 	CHANGES:
-	-Added way to load physics objects via file
-	-Added tutorial for editing said file
-	-Added characters, weapons and mods folders. Hype?
-	-At the time of releasing this, I was expecting the above update note to be several versions old
-	So I can confirm it: "hype". You can now load custom stats to your player, although only 'player.movespeed' does anything
-	-Can now load maps better
-	-A lote more that I didn't write down
+	-Completely redid physics loop
+	-Added linear and angular damping to physics objects
+	-Physics objects now stop recieving physics updates when stopped
+	-A dozen more physics specific changes that aren't worth mentioning alone
 	]]--
-	FRICTION, STOPVEL = 0.8, 20
+	ACCELERATION_SPEED = 1500
+	STOPVEL = 0.1
 	_G.world = love.physics.newWorld(0, 0, true)
 	curmap = "map2"
 	MAPDATA = require(curmap..".mapdata")
@@ -20,11 +19,14 @@ function love.load()
 	DEFAULTS = require("objdef")
 	RANK = 1
 	LEVEL = 1
+	PARALLAX = 0.2
+
+	debugval = 0
 
 	--Load character
 	player = {
 		body = love.physics.newBody(_G.world, 500, 500, "dynamic"),
-		shape = love.physics.newCircleShape(15),
+		shape = love.physics.newCircleShape(45),
 		weapons = {}
 	}
 	function loadCharacter()
@@ -84,14 +86,10 @@ function love.load()
 		end
 	end
 
-	function applyFriction(Body)
+	function checkForStop(Body)
 		local xlvel, ylvel = Body:getLinearVelocity()
-		xlvel, ylvel = xlvel * FRICTION, ylvel * FRICTION
-		if math.abs(xlvel) < STOPVEL and math.abs(ylvel) < STOPVEL then
-			Body:setLinearVelocity(0, 0)
+		if math.abs(xlvel) < STOPVEL and math.abs(ylvel) < STOPVEL and math.abs(Body:getAngularVelocity()) < STOPVEL then
 			Body:setAwake(false)
-		else
-			Body:setLinearVelocity(xlvel, ylvel)
 		end
 	end
 
@@ -112,18 +110,21 @@ function love.load()
 		objects = MAPDATA.objects
 		for k, object in pairs(objects) do
 			object.fixture = love.physics.newFixture(object.body, object.shape, object.mass)
+			object.body:setLinearDamping(object.linearDamping)
+			object.body:setAngularDamping(object.angularDamping)
 		end
 	end
 
 	objects = MAPDATA.objects
 	for k, object in pairs(objects) do
 		object.fixture = love.physics.newFixture(object.body, object.shape, object.mass)
+		object.body:setLinearDamping(object.linearDamping)
+		object.body:setAngularDamping(object.angularDamping)
 	end
 
 	player.fixture = love.physics.newFixture(player.body, player.shape, 0.25)
 
 	posx, posy = 0, 0
-	love.window.setMode(1000, 1000, { resizable = true, msaa = 0, vsync = false })
 	wX, wY = love.window.getMode()
 	wXh, wYh = wX / 2, wY / 2
 	mapTileResolution = 500
@@ -162,6 +163,7 @@ end
 
 function love.draw()
 	posx, posy = player.body:getPosition()
+	posx, posy = posx + (love.mouse.getX() - wXh) * PARALLAX, posy + (love.mouse.getY() - wYh) * PARALLAX
 	love.graphics.translate(wXh, wYh)
 	for k, v in pairs(map) do
 		for k2, v2 in pairs(v) do
@@ -172,7 +174,7 @@ function love.draw()
 		end
 	end
 	love.graphics.setColor(0, 255, 0)
-	love.graphics.print(player.body:getLinearVelocity(), -wXh, -wYh, 0, 0.25)
+	love.graphics.print("Vel: X:"..tostring(spdx).."\nY:"..tostring(spdy).."\nAcceleration speed:"..tostring(ACCELERATION_SPEED).."\nMax movespeed:"..tostring(player.character.movespeed), -wXh, -wYh, 0, 0.25)
 	love.graphics.setColor(193, 47, 14)
 	love.graphics.circle("fill", player.body:getX() - posx, player.body:getY() - posy, player.shape:getRadius())
 	for name, object in pairs(objects) do
@@ -202,29 +204,28 @@ function love.resize(Nx, Ny)
 end
 
 function love.update(Dt)
-	if Dtt > physicsRate then
-		_G.world:update(Dt)
-		Dtt = Dtt - physicsRate
-		for k, object in pairs(objects) do
-			applyFriction(object.body)
+	_G.world:update(Dt)
+	for k, object in pairs(objects) do
+		if object.body:isAwake() then
+			checkForStop(object.body)
 		end
-
-		if love.keyboard.isDown("w") then
-			player.body:applyForce(0, -player.character.movespeed)
-		elseif love.keyboard.isDown("s") then
-			player.body:applyForce(0, player.character.movespeed)
-		end
-		if love.keyboard.isDown("a") then
-			player.body:applyForce(-player.character.movespeed, 0 )
-		elseif love.keyboard.isDown("d") then
-			player.body:applyForce(player.character.movespeed, 0)
-		end
-		if love.keyboard.isDown("space") then
-			player.body:setLinearVelocity(0, 0)
-		end
-	else
-		Dtt = Dtt + Dt
 	end
+	local movesx, movesy = player.body:getLinearVelocity()
+	spdx, spdy = movesx, movesy
+	if love.keyboard.isDown("w") then
+		player.body:applyForce(0, -((1 - movesy/player.character.movespeed) * ACCELERATION_SPEED * Dt))
+	elseif love.keyboard.isDown("s") then
+		player.body:applyForce(0, (player.character.movespeed/movesy) * ACCELERATION_SPEED * Dt)
+	end
+	if love.keyboard.isDown("a") then
+		player.body:applyForce(-player.character.movespeed * Dt, 0 )
+	elseif love.keyboard.isDown("d") then
+		player.body:applyForce(player.character.movespeed * Dt, 0)
+	end
+	if love.keyboard.isDown("space") then
+		player.body:setLinearVelocity(0, 0)
+	end
+
 end
 
 function love.keypressed(Key, Scancode, Repeat)
